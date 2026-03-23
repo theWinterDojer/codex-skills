@@ -1,0 +1,11 @@
+*:Zone.Identifier
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+*.log
+*.swp
+*.tmp

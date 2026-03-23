@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execution Ledger"
+  short_description: "Create and maintain progress.md"
+  default_prompt: "Use $execution-ledger to review this repo and create or update docs/progress.md as the execution source of truth."
