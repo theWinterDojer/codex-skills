@@ -39,12 +39,48 @@ Install these folders into your Codex skills directory so each skill sits at:
 $CODEX_HOME/skills/<skill-name>/SKILL.md
 ```
 
-Then invoke a skill by name in your prompt, or ask for the matching workflow directly. Examples:
+### Install With `skill-installer`
+
+If you have the built-in `skill-installer`, install directly from GitHub:
+
+```text
+$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/session-init
+$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/execution-ledger
+$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/agent-retrospective
+```
+
+After installing, restart Codex to pick up new skills.
+
+### Install Manually
+
+Copy the skill folder you want into your Codex skills directory:
+
+```text
+$CODEX_HOME/skills/session-init/
+$CODEX_HOME/skills/execution-ledger/
+$CODEX_HOME/skills/agent-retrospective/
+```
+
+Each installed skill directory must include its `SKILL.md` file.
+
+### Invoke A Skill
+
+Then invoke a skill by name in your prompt, or ask for the matching workflow directly.
+
+Examples:
 
 ```text
 Use session-init on this repo.
 Use execution-ledger to create docs/progress.md.
 Run agent-retrospective and update AGENTS.md with durable lessons.
+```
+
+You can also be more specific:
+
+```text
+Use session-init and focus on the auth flow.
+Use execution-ledger to refresh docs/progress.md from the current implementation.
+Use agent-retrospective after this bug fix and add only durable repo rules.
 ```
 
 ## Repository Layout
