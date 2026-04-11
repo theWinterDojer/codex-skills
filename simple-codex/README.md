@@ -47,6 +47,8 @@ Run the interactive wizard from this folder:
 
 The wizard detects your current Codex environment, previews conflicts, stages candidates instead of overwriting by default, and asks for a final confirmation before writing anything.
 
+When bundled skills already exist, the wizard defaults to keeping the installed versions and lets you replace them in one batch or review them one by one.
+
 If you want the non-interactive path:
 
 ```bash

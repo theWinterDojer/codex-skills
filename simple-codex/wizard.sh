@@ -25,6 +25,7 @@ REPO_AGENTS_MERGE=""
 
 declare -A SKILL_ACTIONS=()
 declare -A SKILL_STATE=()
+declare -A SKILL_DIFF_FILES=()
 
 GLOBAL_ACTION=""
 REPO_ACTION=""
@@ -206,19 +207,24 @@ count_other_skills() {
 
 detect_skills() {
   local dest
+  local diff_output
   for skill in "${SKILLS[@]}"; do
     dest="$CODEX_HOME/skills/$skill"
     if [[ ! -e "$dest" ]]; then
       SKILL_STATE["$skill"]="missing"
       SKILL_ACTIONS["$skill"]="install"
+      SKILL_DIFF_FILES["$skill"]=""
       continue
     fi
     if dirs_match "$SCRIPT_DIR/skills/$skill" "$dest"; then
       SKILL_STATE["$skill"]="same"
       SKILL_ACTIONS["$skill"]="keep"
+      SKILL_DIFF_FILES["$skill"]=""
     else
-      SKILL_STATE["$skill"]="conflict"
+      SKILL_STATE["$skill"]="different"
       SKILL_ACTIONS["$skill"]="keep"
+      diff_output="$(diff -qr "$SCRIPT_DIR/skills/$skill" "$dest" 2>/dev/null | sed "s|$SCRIPT_DIR/skills/$skill/||g; s|$dest/||g")"
+      SKILL_DIFF_FILES["$skill"]="$diff_output"
     fi
   done
 }
@@ -352,55 +358,71 @@ review_skill_conflict() {
   local skill="$1"
   local choice
   while true; do
-    echo "Existing bundled skill conflict: $skill"
-    choice="$(prompt_choice "Choose action: keep (k), diff (d), replace (r), skip decision (s)" "k" "k" "d" "r" "s")"
+    echo "$skill differs from the bundled version."
+    if [[ -n "${SKILL_DIFF_FILES[$skill]}" ]]; then
+      echo "Changed files:"
+      printf '%s\n' "${SKILL_DIFF_FILES[$skill]}" | sed 's/^/- /'
+    fi
+    choice="$(prompt_choice "Choose action: keep installed (k), replace with bundled (r), show full diff (d), back (b)" "k" "k" "r" "d" "b")"
     case "$choice" in
       k) SKILL_ACTIONS["$skill"]="keep"; return ;;
-      d) show_diff "$CODEX_HOME/skills/$skill/SKILL.md" "$SCRIPT_DIR/skills/$skill/SKILL.md"; pause ;;
       r) SKILL_ACTIONS["$skill"]="replace"; return ;;
-      s) SKILL_ACTIONS["$skill"]="keep"; return ;;
+      d)
+        diff -ru "$CODEX_HOME/skills/$skill" "$SCRIPT_DIR/skills/$skill" || true
+        pause
+        ;;
+      b)
+        return
+        ;;
     esac
   done
 }
 
 choose_skill_actions() {
   local skill
-  local conflicts=0
+  local differing=0
+  local missing=0
 
   echo "Bundled skill plan"
   for skill in "${SKILLS[@]}"; do
     echo "- $skill: state=${SKILL_STATE[$skill]} recommended=${SKILL_ACTIONS[$skill]}"
-    if [[ "${SKILL_STATE[$skill]}" == "conflict" ]]; then
-      conflicts=$((conflicts + 1))
+    if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+      differing=$((differing + 1))
+    fi
+    if [[ "${SKILL_STATE[$skill]}" == "missing" ]]; then
+      missing=$((missing + 1))
     fi
   done
   echo
 
-  if [[ "$conflicts" -eq 0 ]]; then
+  if [[ "$differing" -eq 0 ]]; then
     return
   fi
 
+  echo "$differing bundled skill(s) differ from the installed versions."
+  echo "Missing bundled skills will still be installed unless you cancel."
+  echo
+
   local choice
-  choice="$(prompt_choice "Accept recommended actions, review conflicts, replace all conflicts, keep all conflicts, or cancel? (a/v/r/k/x)" "a" "a" "v" "r" "k" "x")"
+  choice="$(prompt_choice "Choose skill handling: keep installed versions (k), replace all with bundled (r), review one by one (v), cancel (x)" "k" "k" "r" "v" "x")"
   case "$choice" in
-    a) return ;;
     v)
       for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "conflict" ]]; then
+        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           review_skill_conflict "$skill"
         fi
       done
       ;;
     r)
       for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "conflict" ]]; then
+        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           SKILL_ACTIONS["$skill"]="replace"
         fi
       done
       ;;
     k)
       for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "conflict" ]]; then
+        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           SKILL_ACTIONS["$skill"]="keep"
         fi
       done
@@ -420,7 +442,7 @@ show_summary() {
     echo "- Repo AGENTS.md: $REPO_ACTION"
   fi
   for skill in "${SKILLS[@]}"; do
-    echo "- Skill $skill: ${SKILL_ACTIONS[$skill]}"
+    echo "- Skill $skill: ${SKILL_ACTIONS[$skill]} (${SKILL_STATE[$skill]})"
   done
   echo "- Manifest: $MANIFEST_PATH"
   if [[ "$DRY_RUN" -eq 1 ]]; then
