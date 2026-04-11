@@ -99,7 +99,7 @@ prompt_menu() {
       echo "$idx. $option" >&2
       idx=$((idx + 1))
     done
-    printf "Choose a number [%s]: " "$default" >&2
+    printf "Choose an option: " >&2
     read -r choice
     if [[ -z "$choice" ]]; then
       choice="$default"
