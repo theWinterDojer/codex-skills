@@ -2,6 +2,8 @@
 
 Custom Codex skills for starting sessions, tracking execution, and folding lessons back into repo instructions.
 
+This repo also includes a reusable baseline [`AGENTS.md`](./AGENTS.md) intended for placement at `~/.codex/AGENTS.md` as a default global policy.
+
 ## Included Skills
 
 ### `code-review`
@@ -41,6 +43,22 @@ Best for:
 - keeping `AGENTS.md` aligned with current reality.
 
 ## How To Use
+
+### Use The Baseline `AGENTS.md`
+
+Use the repo's [`AGENTS.md`](./AGENTS.md) as a general default at:
+
+```text
+~/.codex/AGENTS.md
+```
+
+Recommended layering:
+
+- `~/.codex/AGENTS.md`: global default engineering philosophy and workflow rules.
+- `<repo>/AGENTS.md`: project-specific constraints, validation rules, and workflow overrides.
+- `agent-retrospective`: evidence-based refinement of the active `AGENTS.md` over time.
+
+Keep the global file broad and durable. Put project-specific requirements in the repository root `AGENTS.md` instead of pushing them into the global baseline.
 
 Install these folders into your Codex skills directory so each skill sits at:
 
@@ -95,6 +113,12 @@ Use session-init and focus on the auth flow.
 Use execution-ledger to refresh docs/progress.md from the current implementation.
 Use agent-retrospective after this bug fix and add only durable repo rules.
 ```
+
+### Recommended Operating Model
+
+Use the baseline `AGENTS.md` as the default source of truth for how you generally want agents to work. Then let individual repositories narrow or override those defaults when architecture, release process, or validation expectations differ.
+
+Use `agent-retrospective` to refine instructions conservatively from stable evidence such as repeated review findings, recurring workflow friction, and validated implementation lessons. Avoid turning either global or repo-local `AGENTS.md` files into session logs or one-off preference dumps.
 
 ## Repository Layout
 
