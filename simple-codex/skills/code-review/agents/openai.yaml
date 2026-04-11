@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review"
+  short_description: "Audit repo changes and tighten code"
+  default_prompt: "Use $code-review to audit recent changes or the current repo, identify correctness risks, and suggest pragmatic cleanup only where justified."

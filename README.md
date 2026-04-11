@@ -4,6 +4,10 @@ Custom Codex skills for starting sessions, tracking execution, and folding lesso
 
 This repo also includes a reusable baseline [`AGENTS.md`](./AGENTS.md) intended for placement at `~/.codex/AGENTS.md` as a default global policy.
 
+It also includes [`simple-codex`](./simple-codex/README.md), a minimal bundled harness with the baseline file, core skills, a safe installer, and an interactive wizard.
+
+If you want the installable product surface, start with `simple-codex/` and run `./wizard.sh`. If you want to edit the underlying skills and baseline, work from the repo root and rebuild the bundle.
+
 ## Included Skills
 
 ### `code-review`
@@ -120,9 +124,24 @@ Use the baseline `AGENTS.md` as the default source of truth for how you generall
 
 Use `agent-retrospective` to refine instructions conservatively from stable evidence such as repeated review findings, recurring workflow friction, and validated implementation lessons. Avoid turning either global or repo-local `AGENTS.md` files into session logs or one-off preference dumps.
 
+### Packaging `simple-codex`
+
+Treat the repo root as the source of truth for:
+- `AGENTS.md`
+- the core skill folders
+- top-level maintenance docs
+
+Treat `simple-codex/` as the installable bundle. Refresh it after changing the baseline or bundled skills:
+
+```bash
+./scripts/build-simple-codex.sh
+```
+
 ## Repository Layout
 
 ```text
+scripts/
+simple-codex/
 code-review/
 agent-retrospective/
 execution-ledger/

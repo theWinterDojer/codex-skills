@@ -1,0 +1,4 @@
+interface:
+  display_name: "Session Init"
+  short_description: "Initialize repo context and next steps"
+  default_prompt: "Use $session-init to read this repo's instructions and execution docs, summarize the current state, and recommend the next step."

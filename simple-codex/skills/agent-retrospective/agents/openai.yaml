@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Retrospective"
+  short_description: "Review sessions and refine AGENTS.md"
+  default_prompt: "Use $agent-retrospective to review this repo's recent work and update AGENTS.md with durable workflow lessons."
