@@ -285,6 +285,8 @@ show_detection_summary() {
   local repo_state="not requested"
   local bundled_found=0
   local other_count
+  local differing_count=0
+  local same_count=0
   local skill
 
   [[ -e "$GLOBAL_AGENTS_DEST" ]] && global_state="found"
@@ -302,17 +304,67 @@ show_detection_summary() {
     if [[ "${SKILL_STATE[$skill]}" != "missing" ]]; then
       bundled_found=$((bundled_found + 1))
     fi
+    if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+      differing_count=$((differing_count + 1))
+    fi
+    if [[ "${SKILL_STATE[$skill]}" == "same" ]]; then
+      same_count=$((same_count + 1))
+    fi
   done
 
-  echo "Detected environment"
+  echo "I found your existing Codex setup."
   echo "- Codex home: $CODEX_HOME"
-  echo "- Global AGENTS.md: $global_state"
+
+  case "$global_state" in
+    found)
+      if cmp -s "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_DEST"; then
+        echo "- Your global AGENTS.md already matches the simple-codex baseline."
+      else
+        echo "- You already have a global AGENTS.md with your own instructions."
+      fi
+      ;;
+    missing)
+      echo "- You do not have a global AGENTS.md yet."
+      ;;
+  esac
+
   if [[ -n "$REPO_PATH" ]]; then
     echo "- Repo path: $REPO_PATH"
+    case "$repo_state" in
+      found)
+        if cmp -s "$REPO_AGENTS_SRC" "$REPO_AGENTS_DEST"; then
+          echo "- This repo already has the simple-codex repo template."
+        else
+          echo "- This repo already has its own AGENTS.md."
+        fi
+        ;;
+      missing)
+        echo "- This repo does not have an AGENTS.md yet."
+        ;;
+      not\ requested)
+        ;;
+    esac
   fi
-  echo "- Repo AGENTS.md: $repo_state"
-  echo "- Bundled skills already present: $bundled_found/${#SKILLS[@]}"
-  echo "- Other skills present: $other_count"
+
+  if [[ "$bundled_found" -eq 0 ]]; then
+    echo "- None of the simple-codex bundled skills are installed yet."
+  else
+    echo "- You already have $bundled_found of ${#SKILLS[@]} simple-codex bundled skill(s) installed."
+  fi
+
+  if [[ "$same_count" -gt 0 ]]; then
+    echo "- $same_count skill(s) already match the versions from this repo."
+  fi
+
+  if [[ "$differing_count" -gt 0 ]]; then
+    echo "- $differing_count installed skill(s) use versions that differ from this repo."
+  fi
+
+  if [[ "$other_count" -gt 0 ]]; then
+    echo "- You also have $other_count other installed skill(s) that simple-codex will leave alone."
+  else
+    echo "- No unrelated installed skills were found."
+  fi
   echo
 }
 
@@ -330,13 +382,14 @@ choose_global_action() {
 
   if cmp -s "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_DEST"; then
     GLOBAL_ACTION="keep"
-    echo "Global AGENTS.md already matches the simple-codex baseline."
+    echo "Your global AGENTS.md is already aligned, so no change is needed there."
     return
   fi
 
   while true; do
-    echo "Existing global AGENTS.md found."
-    choice="$(prompt_menu "Choose how to handle the global baseline:" "1" "Keep existing and stage the simple-codex version beside it" "Show a diff first" "Write a review candidate file" "Replace the existing global baseline" "Skip global baseline handling")"
+    echo "You already have global instructions."
+    echo "simple-codex can leave them alone, stage its version beside them, or replace them."
+    choice="$(prompt_menu "Choose how to handle your global AGENTS.md:" "1" "Keep my current AGENTS.md and stage the simple-codex version beside it" "Show me the difference first" "Write a side-by-side review file" "Replace my current AGENTS.md with the simple-codex version" "Skip this step for now")"
     case "$choice" in
       1) GLOBAL_ACTION="stage"; return ;;
       2) show_diff "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC"; pause ;;
@@ -369,13 +422,14 @@ choose_repo_action() {
 
   if cmp -s "$REPO_AGENTS_SRC" "$REPO_AGENTS_DEST"; then
     REPO_ACTION="keep"
-    echo "Repo AGENTS.md already matches the simple-codex repo template."
+    echo "This repo AGENTS.md is already aligned, so no change is needed there."
     return
   fi
 
   while true; do
-    echo "Existing repo AGENTS.md found."
-    choice="$(prompt_menu "Choose how to handle the repo baseline:" "1" "Keep existing and stage the simple-codex version beside it" "Show a diff first" "Write a review candidate file" "Replace the existing repo baseline" "Skip repo baseline handling")"
+    echo "This repo already has its own AGENTS.md."
+    echo "simple-codex can leave it alone, stage its version beside it, or replace it."
+    choice="$(prompt_menu "Choose how to handle this repo AGENTS.md:" "1" "Keep the current repo AGENTS.md and stage the simple-codex version beside it" "Show me the difference first" "Write a side-by-side review file" "Replace the current repo AGENTS.md with the simple-codex version" "Skip this step for now")"
     case "$choice" in
       1) REPO_ACTION="stage"; return ;;
       2) show_diff "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC"; pause ;;
@@ -390,7 +444,10 @@ review_skill_conflict() {
   local skill="$1"
   local choice
   while true; do
-    echo "$skill differs from the bundled version."
+    echo
+    echo "$skill"
+    echo "Your installed version differs from the version in this repo."
+    echo "Only this skill will be affected by the choice you make here."
     if [[ -n "${SKILL_DIFF_FILES[$skill]}" ]]; then
       echo "Changed files:"
       printf '%s\n' "${SKILL_DIFF_FILES[$skill]}" | sed 's/^/- /'
@@ -398,7 +455,7 @@ review_skill_conflict() {
       echo "Changed files:"
       echo "- bundled skill contents differ"
     fi
-    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep the installed version" "Replace it with the bundled version" "Show the full diff" "Go back")"
+    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep my installed version" "Replace it with the version from this repo" "Show detailed differences" "Skip this skill for now")"
     case "$choice" in
       1) SKILL_ACTIONS["$skill"]="keep"; return ;;
       2) SKILL_ACTIONS["$skill"]="replace"; return ;;
@@ -418,9 +475,19 @@ choose_skill_actions() {
   local differing=0
   local missing=0
 
-  echo "Bundled skill plan"
+  echo "Installed simple-codex skills"
   for skill in "${SKILLS[@]}"; do
-    echo "- $skill: state=${SKILL_STATE[$skill]} recommended=${SKILL_ACTIONS[$skill]}"
+    case "${SKILL_STATE[$skill]}" in
+      same)
+        echo "- $skill: already matches the version from this repo"
+        ;;
+      different)
+        echo "- $skill: installed, but differs from the version in this repo"
+        ;;
+      missing)
+        echo "- $skill: not installed yet"
+        ;;
+    esac
     if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
       differing=$((differing + 1))
     fi
@@ -431,15 +498,25 @@ choose_skill_actions() {
   echo
 
   if [[ "$differing" -eq 0 ]]; then
+    if [[ "$missing" -gt 0 ]]; then
+      echo
+      echo "simple-codex can install the missing bundled skills."
+    else
+      echo
+      echo "Your installed simple-codex skills already match the versions from this repo."
+    fi
     return
   fi
 
-  echo "$differing bundled skill(s) differ from the installed versions."
-  echo "Missing bundled skills will still be installed unless you cancel."
+  echo
+  echo "You already have $differing simple-codex skill(s) installed with versions that differ from this repo."
+  if [[ "$missing" -gt 0 ]]; then
+    echo "Missing bundled skills will still be installed unless you cancel."
+  fi
   echo
 
   local choice
-  choice="$(prompt_menu "Choose how to handle bundled skills:" "1" "Keep installed versions" "Replace all differing skills with bundled versions" "Review differing skills one by one" "Cancel")"
+  choice="$(prompt_menu "Choose how to handle your installed simple-codex skills:" "1" "Keep my installed skill versions" "Replace the differing installed skills with the versions from this repo" "Review each differing skill before deciding" "Cancel")"
   case "$choice" in
     3)
       for skill in "${SKILLS[@]}"; do
@@ -470,16 +547,84 @@ choose_skill_actions() {
 
 show_summary() {
   local skill
+  local replace_skills=()
+  local install_skills=()
   echo
-  echo "Planned actions"
-  echo "- Global AGENTS.md: $GLOBAL_ACTION"
-  if [[ -n "$REPO_PATH" ]]; then
-    echo "- Repo AGENTS.md: $REPO_ACTION"
-  fi
+
   for skill in "${SKILLS[@]}"; do
-    echo "- Skill $skill: ${SKILL_ACTIONS[$skill]} (${SKILL_STATE[$skill]})"
+    case "${SKILL_ACTIONS[$skill]}" in
+      replace) replace_skills+=("$skill") ;;
+      install) install_skills+=("$skill") ;;
+    esac
   done
-  echo "- Manifest: $MANIFEST_PATH"
+
+  echo "Here is what I am about to do:"
+
+  case "$GLOBAL_ACTION" in
+    keep)
+      echo "- Leave your global AGENTS.md unchanged"
+      ;;
+    install)
+      echo "- Install the simple-codex global AGENTS.md"
+      ;;
+    stage)
+      echo "- Leave your global AGENTS.md unchanged and stage the simple-codex version beside it"
+      ;;
+    merge)
+      echo "- Leave your global AGENTS.md unchanged and write a side-by-side review file"
+      ;;
+    replace)
+      echo "- Replace your global AGENTS.md with the simple-codex version"
+      ;;
+    skip)
+      echo "- Skip global AGENTS.md changes"
+      ;;
+  esac
+
+  if [[ -n "$REPO_PATH" ]]; then
+    case "$REPO_ACTION" in
+      keep)
+        echo "- Leave this repo AGENTS.md unchanged"
+        ;;
+      install)
+        echo "- Install the simple-codex repo AGENTS.md template"
+        ;;
+      stage)
+        echo "- Leave this repo AGENTS.md unchanged and stage the simple-codex version beside it"
+        ;;
+      merge)
+        echo "- Leave this repo AGENTS.md unchanged and write a side-by-side review file"
+        ;;
+      replace)
+        echo "- Replace this repo AGENTS.md with the simple-codex template"
+        ;;
+      skip)
+        echo "- Skip repo AGENTS.md changes"
+        ;;
+    esac
+  fi
+
+  if [[ "${#install_skills[@]}" -gt 0 ]]; then
+    echo "- Install these missing skills:"
+    for skill in "${install_skills[@]}"; do
+      echo "  - $skill"
+    done
+  fi
+
+  if [[ "${#replace_skills[@]}" -gt 0 ]]; then
+    echo "- Replace these installed skills with the versions from this repo:"
+    for skill in "${replace_skills[@]}"; do
+      echo "  - $skill"
+    done
+  fi
+
+  if [[ "${#install_skills[@]}" -eq 0 && "${#replace_skills[@]}" -eq 0 ]]; then
+    echo "- Leave your installed simple-codex skills unchanged"
+  fi
+
+  echo "- Leave all unrelated installed skills unchanged"
+  echo "- Write the install manifest to: $MANIFEST_PATH"
+
   if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "- Mode: dry-run"
   fi
