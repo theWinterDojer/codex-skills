@@ -455,7 +455,7 @@ review_skill_conflict() {
       echo "Changed files:"
       echo "- bundled skill contents differ"
     fi
-    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep my installed version" "Replace it with the version from this repo" "Show detailed differences" "Skip this skill for now")"
+    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep my installed version" "Replace it with the version from this repo" "Show detailed differences" "Keep my installed version for now")"
     case "$choice" in
       1) SKILL_ACTIONS["$skill"]="keep"; return ;;
       2) SKILL_ACTIONS["$skill"]="replace"; return ;;

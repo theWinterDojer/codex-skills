@@ -70,6 +70,8 @@ When finishing:
 - include a short summary of pragmatic hardening or cleanup opportunities,
 - state explicitly if no material issues were found,
 - mention validation run and any gaps.
+- end by stating the recommended next step based on the findings,
+- then ask: `What would you like to do next?`
 
 ## Review Posture
 
