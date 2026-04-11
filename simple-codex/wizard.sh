@@ -85,11 +85,37 @@ pause() {
   read -r _
 }
 
-prompt_choice() {
+prompt_menu() {
   local prompt="$1"
   local default="$2"
   shift 2
-  local valid=("$@")
+  local options=("$@")
+  local choice=""
+  local idx=1
+
+  while true; do
+    echo "$prompt" >&2
+    for option in "${options[@]}"; do
+      echo "$idx. $option" >&2
+      idx=$((idx + 1))
+    done
+    printf "Choose a number [%s]: " "$default" >&2
+    read -r choice
+    if [[ -z "$choice" ]]; then
+      choice="$default"
+    fi
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      printf "%s" "$choice"
+      return
+    fi
+    echo "Invalid choice: $choice" >&2
+    idx=1
+  done
+}
+
+prompt_yes_no() {
+  local prompt="$1"
+  local default="$2"
   local choice=""
 
   while true; do
@@ -98,13 +124,15 @@ prompt_choice() {
     if [[ -z "$choice" ]]; then
       choice="$default"
     fi
-    for option in "${valid[@]}"; do
-      if [[ "$choice" == "$option" ]]; then
+    case "$choice" in
+      y|n)
         printf "%s" "$choice"
         return
-      fi
-    done
-    echo "Invalid choice: $choice" >&2
+        ;;
+      *)
+        echo "Invalid choice: $choice" >&2
+        ;;
+    esac
   done
 }
 
@@ -223,7 +251,11 @@ detect_skills() {
     else
       SKILL_STATE["$skill"]="different"
       SKILL_ACTIONS["$skill"]="keep"
-      diff_output="$(diff -qr "$SCRIPT_DIR/skills/$skill" "$dest" 2>/dev/null | sed "s|$SCRIPT_DIR/skills/$skill/||g; s|$dest/||g")"
+      diff_output="$(
+        { diff -qr "$SCRIPT_DIR/skills/$skill" "$dest" 2>/dev/null || true; } \
+          | sed "s|$SCRIPT_DIR/skills/$skill/||g; s|$dest/||g" \
+          | grep -v 'Zone.Identifier' || true
+      )"
       SKILL_DIFF_FILES["$skill"]="$diff_output"
     fi
   done
@@ -240,11 +272,11 @@ show_intro() {
   echo
 
   local entry
-  entry="$(prompt_choice "Continue, dry-run, or cancel? (c/d/x)" "c" "c" "d" "x")"
+  entry="$(prompt_menu "Choose how to start:" "1" "Continue" "Preview only (dry-run)" "Cancel")"
   case "$entry" in
-    c) ;;
-    d) DRY_RUN=1 ;;
-    x) exit 0 ;;
+    1) ;;
+    2) DRY_RUN=1 ;;
+    3) exit 0 ;;
   esac
 }
 
@@ -287,8 +319,8 @@ show_detection_summary() {
 choose_global_action() {
   local choice
   if [[ ! -e "$GLOBAL_AGENTS_DEST" ]]; then
-    choice="$(prompt_choice "No global AGENTS.md found. Install simple-codex baseline? (i/s)" "i" "i" "s")"
-    if [[ "$choice" == "i" ]]; then
+    choice="$(prompt_menu "No global AGENTS.md found. What would you like to do?" "1" "Install the simple-codex global baseline" "Skip global baseline setup")"
+    if [[ "$choice" == "1" ]]; then
       GLOBAL_ACTION="install"
     else
       GLOBAL_ACTION="skip"
@@ -304,13 +336,13 @@ choose_global_action() {
 
   while true; do
     echo "Existing global AGENTS.md found."
-    choice="$(prompt_choice "Choose global baseline action: keep+stage (k), diff (d), review candidate (m), replace (r), skip (s)" "k" "k" "d" "m" "r" "s")"
+    choice="$(prompt_menu "Choose how to handle the global baseline:" "1" "Keep existing and stage the simple-codex version beside it" "Show a diff first" "Write a review candidate file" "Replace the existing global baseline" "Skip global baseline handling")"
     case "$choice" in
-      k) GLOBAL_ACTION="stage"; return ;;
-      d) show_diff "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC"; pause ;;
-      m) GLOBAL_ACTION="merge"; return ;;
-      r) GLOBAL_ACTION="replace"; return ;;
-      s) GLOBAL_ACTION="skip"; return ;;
+      1) GLOBAL_ACTION="stage"; return ;;
+      2) show_diff "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC"; pause ;;
+      3) GLOBAL_ACTION="merge"; return ;;
+      4) GLOBAL_ACTION="replace"; return ;;
+      5) GLOBAL_ACTION="skip"; return ;;
     esac
   done
 }
@@ -326,8 +358,8 @@ choose_repo_action() {
     exit 1
   fi
   if [[ ! -e "$REPO_AGENTS_DEST" ]]; then
-    choice="$(prompt_choice "No repo AGENTS.md found. Install repo template? (i/s)" "i" "i" "s")"
-    if [[ "$choice" == "i" ]]; then
+    choice="$(prompt_menu "No repo AGENTS.md found. What would you like to do?" "1" "Install the simple-codex repo template" "Skip repo baseline setup")"
+    if [[ "$choice" == "1" ]]; then
       REPO_ACTION="install"
     else
       REPO_ACTION="skip"
@@ -343,13 +375,13 @@ choose_repo_action() {
 
   while true; do
     echo "Existing repo AGENTS.md found."
-    choice="$(prompt_choice "Choose repo baseline action: keep+stage (k), diff (d), review candidate (m), replace (r), skip (s)" "k" "k" "d" "m" "r" "s")"
+    choice="$(prompt_menu "Choose how to handle the repo baseline:" "1" "Keep existing and stage the simple-codex version beside it" "Show a diff first" "Write a review candidate file" "Replace the existing repo baseline" "Skip repo baseline handling")"
     case "$choice" in
-      k) REPO_ACTION="stage"; return ;;
-      d) show_diff "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC"; pause ;;
-      m) REPO_ACTION="merge"; return ;;
-      r) REPO_ACTION="replace"; return ;;
-      s) REPO_ACTION="skip"; return ;;
+      1) REPO_ACTION="stage"; return ;;
+      2) show_diff "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC"; pause ;;
+      3) REPO_ACTION="merge"; return ;;
+      4) REPO_ACTION="replace"; return ;;
+      5) REPO_ACTION="skip"; return ;;
     esac
   done
 }
@@ -362,16 +394,19 @@ review_skill_conflict() {
     if [[ -n "${SKILL_DIFF_FILES[$skill]}" ]]; then
       echo "Changed files:"
       printf '%s\n' "${SKILL_DIFF_FILES[$skill]}" | sed 's/^/- /'
+    else
+      echo "Changed files:"
+      echo "- bundled skill contents differ"
     fi
-    choice="$(prompt_choice "Choose action: keep installed (k), replace with bundled (r), show full diff (d), back (b)" "k" "k" "r" "d" "b")"
+    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep the installed version" "Replace it with the bundled version" "Show the full diff" "Go back")"
     case "$choice" in
-      k) SKILL_ACTIONS["$skill"]="keep"; return ;;
-      r) SKILL_ACTIONS["$skill"]="replace"; return ;;
-      d)
+      1) SKILL_ACTIONS["$skill"]="keep"; return ;;
+      2) SKILL_ACTIONS["$skill"]="replace"; return ;;
+      3)
         diff -ru "$CODEX_HOME/skills/$skill" "$SCRIPT_DIR/skills/$skill" || true
         pause
         ;;
-      b)
+      4)
         return
         ;;
     esac
@@ -404,30 +439,30 @@ choose_skill_actions() {
   echo
 
   local choice
-  choice="$(prompt_choice "Choose skill handling: keep installed versions (k), replace all with bundled (r), review one by one (v), cancel (x)" "k" "k" "r" "v" "x")"
+  choice="$(prompt_menu "Choose how to handle bundled skills:" "1" "Keep installed versions" "Replace all differing skills with bundled versions" "Review differing skills one by one" "Cancel")"
   case "$choice" in
-    v)
+    3)
       for skill in "${SKILLS[@]}"; do
         if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           review_skill_conflict "$skill"
         fi
       done
       ;;
-    r)
+    2)
       for skill in "${SKILLS[@]}"; do
         if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           SKILL_ACTIONS["$skill"]="replace"
         fi
       done
       ;;
-    k)
+    1)
       for skill in "${SKILLS[@]}"; do
         if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
           SKILL_ACTIONS["$skill"]="keep"
         fi
       done
       ;;
-    x)
+    4)
       exit 0
       ;;
   esac
@@ -540,22 +575,22 @@ choose_repo_action
 choose_skill_actions
 show_summary
 
-FINAL_CHOICE="$(prompt_choice "Apply these actions, go back, or cancel? (a/b/x)" "x" "a" "b" "x")"
+FINAL_CHOICE="$(prompt_menu "What would you like to do next?" "3" "Apply these actions" "Go back and adjust choices" "Cancel")"
 case "$FINAL_CHOICE" in
-  a)
+  1)
     apply_actions
     ;;
-  b)
+  2)
     choose_global_action
     choose_repo_action
     choose_skill_actions
     show_summary
-    FINAL_CHOICE="$(prompt_choice "Apply these actions or cancel? (a/x)" "x" "a" "x")"
-    if [[ "$FINAL_CHOICE" == "a" ]]; then
+    FINAL_CHOICE="$(prompt_menu "What would you like to do next?" "2" "Apply these actions" "Cancel")"
+    if [[ "$FINAL_CHOICE" == "1" ]]; then
       apply_actions
     fi
     ;;
-  x)
+  3)
     echo "Cancelled."
     ;;
 esac
