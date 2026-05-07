@@ -39,20 +39,13 @@ Optional:
 
 ## Install
 
-From the published repo, the lowest-friction path is the URL installer. It downloads the bundle and launches this wizard:
+Run the installer to download the latest bundle and launch the interactive wizard:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash
 ```
 
-Pass wizard options through with `bash -s --`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --dry-run
-curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --repo /path/to/repo
-```
-
-If you cloned or downloaded the repo first, run the interactive wizard from this folder:
+Or clone or download the repo and run the wizard locally from this folder:
 
 ```bash
 ./wizard.sh
@@ -62,23 +55,10 @@ The wizard detects your current Codex environment, previews conflicts, stages ca
 
 When bundled skills already exist, the wizard defaults to keeping the installed versions and lets you replace them in one batch or review them one by one.
 
-If you want the non-interactive path:
-
-```bash
-./install.sh
-```
-
 If you want to refresh this bundle from the root source files before installing:
 
 ```bash
 ../scripts/build-simple-codex.sh
-```
-
-If you also want to scaffold a repo-local `AGENTS.md`:
-
-```bash
-./wizard.sh --repo /path/to/repo
-./install.sh --repo /path/to/repo
 ```
 
 Default behavior is symbiotic:

@@ -6,22 +6,15 @@ This repo also includes a reusable baseline [`AGENTS.md`](./AGENTS.md) intended 
 
 It also includes [`simple-codex`](./simple-codex/README.md), a minimal bundled harness with the baseline file, core skills, a safe installer, and an interactive wizard.
 
-## Quick Install
+## Install
 
-Run the URL installer to download the latest bundle and launch the interactive wizard:
+Run the installer to download the latest bundle and launch the interactive wizard:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash
 ```
 
-Pass wizard options through with `bash -s --`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --dry-run
-curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --repo /path/to/repo
-```
-
-If you prefer to inspect the files first:
+Or clone the repo and run the wizard locally:
 
 ```bash
 git clone https://github.com/theWinterDojer/codex-skills.git
@@ -29,7 +22,7 @@ cd codex-skills/simple-codex
 ./wizard.sh
 ```
 
-If you want to edit the underlying skills and baseline, work from the repo root and rebuild the bundle.
+The wizard previews what it will install and asks before writing anything.
 
 ## Included Skills
 
@@ -86,38 +79,6 @@ Recommended layering:
 - `agent-retrospective`: evidence-based refinement of the active `AGENTS.md` over time.
 
 Keep the global file broad and durable. Put project-specific requirements in the repository root `AGENTS.md` instead of pushing them into the global baseline.
-
-Install these folders into your Codex skills directory so each skill sits at:
-
-```text
-$CODEX_HOME/skills/<skill-name>/SKILL.md
-```
-
-### Install With `skill-installer`
-
-If you have the built-in `skill-installer`, install directly from GitHub:
-
-```text
-$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/code-review
-$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/session-init
-$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/execution-ledger
-$skill-installer https://github.com/theWinterDojer/codex-skills/tree/main/agent-retrospective
-```
-
-After installing, restart Codex to pick up new skills.
-
-### Install Manually
-
-Copy the skill folder you want into your Codex skills directory:
-
-```text
-$CODEX_HOME/skills/code-review/
-$CODEX_HOME/skills/session-init/
-$CODEX_HOME/skills/execution-ledger/
-$CODEX_HOME/skills/agent-retrospective/
-```
-
-Each installed skill directory must include its `SKILL.md` file.
 
 ### Invoke A Skill
 
