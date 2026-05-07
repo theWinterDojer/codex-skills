@@ -39,7 +39,20 @@ Optional:
 
 ## Install
 
-Run the interactive wizard from this folder:
+From the published repo, the lowest-friction path is the URL installer. It downloads the bundle and launches this wizard:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash
+```
+
+Pass wizard options through with `bash -s --`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --repo /path/to/repo
+```
+
+If you cloned or downloaded the repo first, run the interactive wizard from this folder:
 
 ```bash
 ./wizard.sh

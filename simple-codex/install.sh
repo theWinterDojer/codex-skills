@@ -26,13 +26,26 @@ Options:
 EOF
 }
 
+require_value() {
+  local option="$1"
+  local value="${2:-}"
+
+  if [[ -z "$value" || "$value" == --* ]]; then
+    echo "$option requires a path value." >&2
+    usage >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --codex-home)
+      require_value "$1" "${2:-}"
       CODEX_HOME="$2"
       shift 2
       ;;
     --repo)
+      require_value "$1" "${2:-}"
       REPO_PATH="$2"
       shift 2
       ;;

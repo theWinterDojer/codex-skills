@@ -43,13 +43,26 @@ Options:
 EOF
 }
 
+require_value() {
+  local option="$1"
+  local value="${2:-}"
+
+  if [[ -z "$value" || "$value" == --* ]]; then
+    echo "$option requires a path value." >&2
+    usage >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --codex-home)
+      require_value "$1" "${2:-}"
       CODEX_HOME="$2"
       shift 2
       ;;
     --repo)
+      require_value "$1" "${2:-}"
       REPO_PATH="$2"
       shift 2
       ;;
@@ -91,9 +104,10 @@ prompt_menu() {
   shift 2
   local options=("$@")
   local choice=""
-  local idx=1
+  local idx
 
   while true; do
+    idx=1
     echo "$prompt" >&2
     for option in "${options[@]}"; do
       echo "$idx. $option" >&2
@@ -109,30 +123,6 @@ prompt_menu() {
       return
     fi
     echo "Invalid choice: $choice" >&2
-    idx=1
-  done
-}
-
-prompt_yes_no() {
-  local prompt="$1"
-  local default="$2"
-  local choice=""
-
-  while true; do
-    printf "%s [%s]: " "$prompt" "$default" >&2
-    read -r choice
-    if [[ -z "$choice" ]]; then
-      choice="$default"
-    fi
-    case "$choice" in
-      y|n)
-        printf "%s" "$choice"
-        return
-        ;;
-      *)
-        echo "Invalid choice: $choice" >&2
-        ;;
-    esac
   done
 }
 
@@ -623,10 +613,13 @@ show_summary() {
   fi
 
   echo "- Leave all unrelated installed skills unchanged"
-  echo "- Write the install manifest to: $MANIFEST_PATH"
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "- Preview manifest target: $MANIFEST_PATH"
     echo "- Mode: dry-run"
+    echo "- No files will be written"
+  else
+    echo "- Write the install manifest to: $MANIFEST_PATH"
   fi
   echo
 }

@@ -6,7 +6,30 @@ This repo also includes a reusable baseline [`AGENTS.md`](./AGENTS.md) intended 
 
 It also includes [`simple-codex`](./simple-codex/README.md), a minimal bundled harness with the baseline file, core skills, a safe installer, and an interactive wizard.
 
-If you want the installable product surface, start with `simple-codex/` and run `./wizard.sh`. If you want to edit the underlying skills and baseline, work from the repo root and rebuild the bundle.
+## Quick Install
+
+Run the URL installer to download the latest bundle and launch the interactive wizard:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash
+```
+
+Pass wizard options through with `bash -s --`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash -s -- --repo /path/to/repo
+```
+
+If you prefer to inspect the files first:
+
+```bash
+git clone https://github.com/theWinterDojer/codex-skills.git
+cd codex-skills/simple-codex
+./wizard.sh
+```
+
+If you want to edit the underlying skills and baseline, work from the repo root and rebuild the bundle.
 
 ## Included Skills
 

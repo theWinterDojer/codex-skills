@@ -70,11 +70,12 @@ When finishing:
 - include a short summary of pragmatic hardening or cleanup opportunities,
 - state explicitly if no material issues were found,
 - mention validation run and any gaps.
-- end by stating the recommended next step based on the findings,
-- then ask: `What would you like to do next?`
+- if the user asked for fixes or optimization, apply clear low-risk improvements after the audit and report what changed.
+- end with the recommended next step only when more work remains or a decision is blocked.
 
 ## Review Posture
 
 - Be skeptical of large refactors that claim to simplify things while changing behavior.
 - Be willing to say the code is acceptable when no meaningful problems are evident.
 - Keep the bar practical: catch bugs, risk, drift, and waste without turning the review into redesign.
+- Do not ask a generic follow-up question when the next action is already clear from the request and findings.

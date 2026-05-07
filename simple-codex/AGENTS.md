@@ -21,6 +21,12 @@ This file is an evergreen baseline for Codex agent behavior. Use it as a default
 - Keep plans practical, minimal, and focused on the shortest correct path.
 - If the requested approach seems overbuilt, propose a simpler alternative before editing.
 
+## Execution
+- When the user asks for an implementation, audit, or optimization, carry the work through the smallest complete loop: inspect, edit when appropriate, validate, and summarize.
+- Do not stop at recommendations when the requested change is clear and low risk.
+- Ask follow-up questions only when the answer materially changes correctness, architecture, release behavior, or data handling.
+- Keep the worktree in mind; preserve unrelated user changes and call out dirty state that affects the task.
+
 ## Implementation Style
 - Prefer straightforward, readable code over cleverness.
 - Consolidate active duplication when it reduces error risk or maintenance burden.
@@ -47,6 +53,7 @@ This file is an evergreen baseline for Codex agent behavior. Use it as a default
 - Validate non-trivial changes with the smallest effective check set.
 - Use targeted validation appropriate to the change surface rather than defaulting to the largest possible test run.
 - Do not claim completion without stating what was validated and what was not.
+- For shell scripts, include syntax checks and at least one representative non-destructive execution path when practical.
 - When metadata, manifests, summaries, or similar output descriptions describe produced output, derive them from the actual post-operation state rather than from preflight estimates.
 
 ## Questions
