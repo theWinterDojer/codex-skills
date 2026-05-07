@@ -18,10 +18,8 @@ REPO_AGENTS_SRC="$SCRIPT_DIR/templates/repo-AGENTS.md"
 
 GLOBAL_AGENTS_DEST=""
 GLOBAL_AGENTS_STAGED=""
-GLOBAL_AGENTS_MERGE=""
 REPO_AGENTS_DEST=""
 REPO_AGENTS_STAGED=""
-REPO_AGENTS_MERGE=""
 
 declare -A SKILL_ACTIONS=()
 declare -A SKILL_STATE=()
@@ -84,13 +82,11 @@ done
 
 GLOBAL_AGENTS_DEST="$CODEX_HOME/AGENTS.md"
 GLOBAL_AGENTS_STAGED="$CODEX_HOME/AGENTS.simple-codex.md"
-GLOBAL_AGENTS_MERGE="$CODEX_HOME/AGENTS.simple-codex.merge.md"
 MANIFEST_PATH="$CODEX_HOME/simple-codex-manifest.txt"
 
 if [[ -n "$REPO_PATH" ]]; then
   REPO_AGENTS_DEST="$REPO_PATH/AGENTS.md"
   REPO_AGENTS_STAGED="$REPO_PATH/AGENTS.simple-codex.md"
-  REPO_AGENTS_MERGE="$REPO_PATH/AGENTS.simple-codex.merge.md"
 fi
 
 pause() {
@@ -134,29 +130,6 @@ show_diff() {
     return
   fi
   diff -u "$left" "$right" || true
-}
-
-write_merge_candidate() {
-  local existing="$1"
-  local baseline="$2"
-  local output="$3"
-  local title="$4"
-
-  mkdir -p "$(dirname "$output")"
-  cat > "$output" <<EOF
-# $title
-#
-# This is a manual review candidate created by simple-codex.
-# It is not an auto-merged result. Review it before adopting any section.
-
-## Existing File
-
-$(cat "$existing")
-
-## simple-codex Candidate
-
-$(cat "$baseline")
-EOF
 }
 
 dirs_match() {
@@ -254,15 +227,13 @@ detect_skills() {
 show_intro() {
   echo "simple-codex wizard"
   echo
-  echo "This wizard only manages simple-codex assets."
-  echo "- It can install bundled skills."
-  echo "- It can install or stage global and repo AGENTS.md files."
-  echo "- It does not remove unrelated skills."
-  echo "- It does not overwrite existing baselines without confirmation."
+  echo "This wizard installs simple-codex skills and optional AGENTS.md files."
+  echo "Existing AGENTS.md files are preserved unless you choose to replace them."
+  echo "Unrelated skills are left alone."
   echo
 
   local entry
-  entry="$(prompt_menu "Choose how to start:" "1" "Continue" "Preview only (dry-run)" "Cancel")"
+  entry="$(prompt_menu "Choose how to start:" "1" "Install or update" "Preview only (dry-run)" "Cancel")"
   case "$entry" in
     1) ;;
     2) DRY_RUN=1 ;;
@@ -377,15 +348,13 @@ choose_global_action() {
   fi
 
   while true; do
-    echo "You already have global instructions."
-    echo "simple-codex can leave them alone, stage its version beside them, or replace them."
-    choice="$(prompt_menu "Choose how to handle your global AGENTS.md:" "1" "Keep my current AGENTS.md and stage the simple-codex version beside it" "Show me the difference first" "Write a side-by-side review file" "Replace my current AGENTS.md with the simple-codex version" "Skip this step for now")"
+    echo "Global AGENTS.md already exists."
+    choice="$(prompt_menu "Replace it with the simple-codex default AGENTS.md?" "1" "No, keep current and save the simple-codex default beside it" "Yes, replace it" "Show what changed" "Skip")"
     case "$choice" in
       1) GLOBAL_ACTION="stage"; return ;;
-      2) show_diff "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC"; pause ;;
-      3) GLOBAL_ACTION="merge"; return ;;
-      4) GLOBAL_ACTION="replace"; return ;;
-      5) GLOBAL_ACTION="skip"; return ;;
+      2) GLOBAL_ACTION="replace"; return ;;
+      3) show_diff "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC"; pause ;;
+      4) GLOBAL_ACTION="skip"; return ;;
     esac
   done
 }
@@ -417,15 +386,13 @@ choose_repo_action() {
   fi
 
   while true; do
-    echo "This repo already has its own AGENTS.md."
-    echo "simple-codex can leave it alone, stage its version beside it, or replace it."
-    choice="$(prompt_menu "Choose how to handle this repo AGENTS.md:" "1" "Keep the current repo AGENTS.md and stage the simple-codex version beside it" "Show me the difference first" "Write a side-by-side review file" "Replace the current repo AGENTS.md with the simple-codex version" "Skip this step for now")"
+    echo "Repo AGENTS.md already exists."
+    choice="$(prompt_menu "Replace it with the simple-codex repo AGENTS.md template?" "1" "No, keep current and save the simple-codex template beside it" "Yes, replace it" "Show what changed" "Skip")"
     case "$choice" in
       1) REPO_ACTION="stage"; return ;;
-      2) show_diff "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC"; pause ;;
-      3) REPO_ACTION="merge"; return ;;
-      4) REPO_ACTION="replace"; return ;;
-      5) REPO_ACTION="skip"; return ;;
+      2) REPO_ACTION="replace"; return ;;
+      3) show_diff "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC"; pause ;;
+      4) REPO_ACTION="skip"; return ;;
     esac
   done
 }
@@ -445,16 +412,73 @@ review_skill_conflict() {
       echo "Changed files:"
       echo "- bundled skill contents differ"
     fi
-    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Keep my installed version" "Replace it with the version from this repo" "Show detailed differences" "Keep my installed version for now")"
+    choice="$(prompt_menu "Choose how to handle this skill:" "1" "Show detailed differences" "Replace with the version from this repo" "Keep installed version")"
     case "$choice" in
-      1) SKILL_ACTIONS["$skill"]="keep"; return ;;
-      2) SKILL_ACTIONS["$skill"]="replace"; return ;;
-      3)
+      1)
         diff -ru "$CODEX_HOME/skills/$skill" "$SCRIPT_DIR/skills/$skill" || true
         pause
         ;;
-      4)
+      2) SKILL_ACTIONS["$skill"]="replace"; return ;;
+      3) SKILL_ACTIONS["$skill"]="keep"; return ;;
+    esac
+  done
+}
+
+show_differing_skill_diffs() {
+  local skill
+
+  for skill in "${SKILLS[@]}"; do
+    if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+      echo
+      echo "$skill"
+      echo "----------------------------------------"
+      if [[ -n "${SKILL_DIFF_FILES[$skill]}" ]]; then
+        echo "Changed files:"
+        printf '%s\n' "${SKILL_DIFF_FILES[$skill]}" | sed 's/^/- /'
+        echo
+      fi
+      diff -ru "$CODEX_HOME/skills/$skill" "$SCRIPT_DIR/skills/$skill" || true
+    fi
+  done
+}
+
+choose_differing_skill_actions() {
+  local choice
+  local skill
+
+  while true; do
+    choice="$(prompt_menu "Choose how to handle your installed simple-codex skills:" "1" "Show what changed" "Replace differing skills with the versions from this repo" "Keep installed versions" "Review each differing skill" "Cancel")"
+    case "$choice" in
+      1)
+        show_differing_skill_diffs
+        pause
+        ;;
+      2)
+        for skill in "${SKILLS[@]}"; do
+          if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+            SKILL_ACTIONS["$skill"]="replace"
+          fi
+        done
         return
+        ;;
+      3)
+        for skill in "${SKILLS[@]}"; do
+          if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+            SKILL_ACTIONS["$skill"]="keep"
+          fi
+        done
+        return
+        ;;
+      4)
+        for skill in "${SKILLS[@]}"; do
+          if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
+            review_skill_conflict "$skill"
+          fi
+        done
+        return
+        ;;
+      5)
+        exit 0
         ;;
     esac
   done
@@ -505,34 +529,7 @@ choose_skill_actions() {
   fi
   echo
 
-  local choice
-  choice="$(prompt_menu "Choose how to handle your installed simple-codex skills:" "1" "Keep my installed skill versions" "Replace the differing installed skills with the versions from this repo" "Review each differing skill before deciding" "Cancel")"
-  case "$choice" in
-    3)
-      for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
-          review_skill_conflict "$skill"
-        fi
-      done
-      ;;
-    2)
-      for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
-          SKILL_ACTIONS["$skill"]="replace"
-        fi
-      done
-      ;;
-    1)
-      for skill in "${SKILLS[@]}"; do
-        if [[ "${SKILL_STATE[$skill]}" == "different" ]]; then
-          SKILL_ACTIONS["$skill"]="keep"
-        fi
-      done
-      ;;
-    4)
-      exit 0
-      ;;
-  esac
+  choose_differing_skill_actions
 }
 
 show_summary() {
@@ -560,9 +557,6 @@ show_summary() {
     stage)
       echo "- Leave your global AGENTS.md unchanged and stage the simple-codex version beside it"
       ;;
-    merge)
-      echo "- Leave your global AGENTS.md unchanged and write a side-by-side review file"
-      ;;
     replace)
       echo "- Replace your global AGENTS.md with the simple-codex version"
       ;;
@@ -581,9 +575,6 @@ show_summary() {
         ;;
       stage)
         echo "- Leave this repo AGENTS.md unchanged and stage the simple-codex version beside it"
-        ;;
-      merge)
-        echo "- Leave this repo AGENTS.md unchanged and write a side-by-side review file"
         ;;
       replace)
         echo "- Replace this repo AGENTS.md with the simple-codex template"
@@ -632,10 +623,6 @@ apply_global_action() {
     stage)
       copy_if_needed "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_STAGED"
       ;;
-    merge)
-      write_merge_candidate "$GLOBAL_AGENTS_DEST" "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_MERGE" "Global AGENTS Review Candidate"
-      echo "wrote: $GLOBAL_AGENTS_MERGE"
-      ;;
     keep|skip)
       ;;
   esac
@@ -648,10 +635,6 @@ apply_repo_action() {
       ;;
     stage)
       copy_if_needed "$REPO_AGENTS_SRC" "$REPO_AGENTS_STAGED"
-      ;;
-    merge)
-      write_merge_candidate "$REPO_AGENTS_DEST" "$REPO_AGENTS_SRC" "$REPO_AGENTS_MERGE" "Repo AGENTS Review Candidate"
-      echo "wrote: $REPO_AGENTS_MERGE"
       ;;
     keep|skip)
       ;;

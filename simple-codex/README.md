@@ -41,15 +41,16 @@ Optional:
 
 ### Option 1: Install Skills Manually
 
-From a cloned or downloaded repo, copy the bundled skill folders into your Codex skills directory:
+Download each bundled skill folder and copy it into your Codex skills directory:
 
-```bash
-mkdir -p ~/.codex/skills
-cp -R skills/code-review ~/.codex/skills/
-cp -R skills/session-init ~/.codex/skills/
-cp -R skills/execution-ledger ~/.codex/skills/
-cp -R skills/agent-retrospective ~/.codex/skills/
+```text
+~/.codex/skills/code-review/
+~/.codex/skills/session-init/
+~/.codex/skills/execution-ledger/
+~/.codex/skills/agent-retrospective/
 ```
+
+Each folder must include its `SKILL.md` file. You can also review `AGENTS.md` and copy it to `~/.codex/AGENTS.md` if you want the baseline instructions.
 
 ### Option 2: Run The Installer URL
 
@@ -61,9 +62,11 @@ curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/in
 
 ### Option 3: Clone And Run Locally
 
-Clone or download the repo and run the wizard locally from this folder:
+Clone the repo and run the local wizard:
 
 ```bash
+git clone https://github.com/theWinterDojer/codex-skills.git
+cd codex-skills/simple-codex
 ./wizard.sh
 ```
 
@@ -71,7 +74,7 @@ The wizard detects your current Codex environment, previews conflicts, stages ca
 
 When bundled skills already exist, the wizard defaults to keeping the installed versions and lets you replace them in one batch or review them one by one.
 
-If you want to refresh this bundle from the root source files before installing:
+If you are editing this repo and want to refresh the bundle from the root source files:
 
 ```bash
 ../scripts/build-simple-codex.sh
@@ -80,18 +83,11 @@ If you want to refresh this bundle from the root source files before installing:
 Default behavior is symbiotic:
 - unrelated existing skills are left alone,
 - bundled skill names are installed if missing,
-- existing bundled skill names are left alone unless you pass `--force`,
+- existing bundled skill names are left alone unless you choose to replace them,
 - an existing global `AGENTS.md` is preserved and the simple-codex baseline is staged beside it,
 - an existing repo `AGENTS.md` is preserved and the simple-codex repo template is staged beside it.
 
-When the wizard offers a review candidate, it writes a side-by-side review aid rather than an automatic merged file.
-
-To replace simple-codex-managed targets intentionally:
-
-```bash
-./install.sh --force
-./install.sh --force --repo /path/to/repo
-```
+When files differ, the wizard can show the changes before you decide whether to keep or replace them.
 
 ## Files
 

@@ -10,16 +10,16 @@ It also includes [`simple-codex`](./simple-codex/README.md), a minimal bundled h
 
 ### Option 1: Install Skills Manually
 
-Download the repo, then copy the skill folders into your Codex skills directory:
+Download each skill folder and copy it into your Codex skills directory:
 
-```bash
-git clone https://github.com/theWinterDojer/codex-skills.git
-mkdir -p ~/.codex/skills
-cp -R codex-skills/code-review ~/.codex/skills/
-cp -R codex-skills/session-init ~/.codex/skills/
-cp -R codex-skills/execution-ledger ~/.codex/skills/
-cp -R codex-skills/agent-retrospective ~/.codex/skills/
+```text
+~/.codex/skills/code-review/
+~/.codex/skills/session-init/
+~/.codex/skills/execution-ledger/
+~/.codex/skills/agent-retrospective/
 ```
+
+Each folder must include its `SKILL.md` file. You can also review `AGENTS.md` and copy it to `~/.codex/AGENTS.md` if you want the baseline instructions.
 
 ### Option 2: Run The Installer URL
 
@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/in
 
 ### Option 3: Clone And Run Locally
 
-Clone the repo and run the wizard locally:
+Clone the repo and run the local wizard:
 
 ```bash
 git clone https://github.com/theWinterDojer/codex-skills.git
