@@ -116,6 +116,7 @@ prompt_menu() {
       choice="$default"
     fi
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      echo >&2
       printf "%s" "$choice"
       return
     fi
