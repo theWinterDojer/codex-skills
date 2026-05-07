@@ -6,6 +6,7 @@ CODEX_HOME="${HOME}/.codex"
 REPO_PATH=""
 DRY_RUN=0
 MODE="install"
+INSTALL_SCOPE="all"
 
 SKILLS=(
   code-review
@@ -244,6 +245,17 @@ show_intro() {
   esac
 }
 
+choose_install_scope() {
+  local choice
+
+  choice="$(prompt_menu "What would you like to install or update?" "1" "Global AGENTS.md baseline and simple-codex skills" "Only the global AGENTS.md baseline" "Only the simple-codex skills")"
+  case "$choice" in
+    1) INSTALL_SCOPE="all" ;;
+    2) INSTALL_SCOPE="agents" ;;
+    3) INSTALL_SCOPE="skills" ;;
+  esac
+}
+
 show_detection_summary() {
   local global_state="missing"
   local repo_state="not requested"
@@ -335,12 +347,8 @@ show_detection_summary() {
 choose_global_action() {
   local choice
   if [[ ! -e "$GLOBAL_AGENTS_DEST" ]]; then
-    choice="$(prompt_menu "No global AGENTS.md found. What would you like to do?" "1" "Install the simple-codex global baseline" "Skip global baseline setup")"
-    if [[ "$choice" == "1" ]]; then
-      GLOBAL_ACTION="install"
-    else
-      GLOBAL_ACTION="skip"
-    fi
+    GLOBAL_ACTION="install"
+    echo "Global AGENTS.md will be installed."
     return
   fi
 
@@ -373,12 +381,8 @@ choose_repo_action() {
     exit 1
   fi
   if [[ ! -e "$REPO_AGENTS_DEST" ]]; then
-    choice="$(prompt_menu "No repo AGENTS.md found. What would you like to do?" "1" "Install the simple-codex repo template" "Skip repo baseline setup")"
-    if [[ "$choice" == "1" ]]; then
-      REPO_ACTION="install"
-    else
-      REPO_ACTION="skip"
-    fi
+    REPO_ACTION="install"
+    echo "Repo AGENTS.md template will be installed."
     return
   fi
 
@@ -496,12 +500,15 @@ choose_skill_actions() {
   for skill in "${SKILLS[@]}"; do
     case "${SKILL_STATE[$skill]}" in
       same)
+        SKILL_ACTIONS["$skill"]="keep"
         echo "- $skill: already matches the version from this repo"
         ;;
       different)
+        SKILL_ACTIONS["$skill"]="keep"
         echo "- $skill: installed, but differs from the version in this repo"
         ;;
       missing)
+        SKILL_ACTIONS["$skill"]="install"
         echo "- $skill: not installed yet"
         ;;
     esac
@@ -533,6 +540,14 @@ choose_skill_actions() {
   echo
 
   choose_differing_skill_actions
+}
+
+skip_skill_actions() {
+  local skill
+
+  for skill in "${SKILLS[@]}"; do
+    SKILL_ACTIONS["$skill"]="keep"
+  done
 }
 
 show_summary() {
@@ -602,7 +617,9 @@ show_summary() {
     done
   fi
 
-  if [[ "${#install_skills[@]}" -eq 0 && "${#replace_skills[@]}" -eq 0 ]]; then
+  if [[ "${#install_skills[@]}" -eq 0 && "${#replace_skills[@]}" -eq 0 && "$INSTALL_SCOPE" == "agents" ]]; then
+    echo "- Skip simple-codex skill changes"
+  elif [[ "${#install_skills[@]}" -eq 0 && "${#replace_skills[@]}" -eq 0 ]]; then
     echo "- Leave your installed simple-codex skills unchanged"
   fi
 
@@ -824,10 +841,25 @@ if [[ "$MODE" == "uninstall" ]]; then
   exit 0
 fi
 
+choose_install_scope
 show_detection_summary
-choose_global_action
-choose_repo_action
-choose_skill_actions
+if [[ "$INSTALL_SCOPE" == "skills" ]]; then
+  GLOBAL_ACTION="skip"
+  REPO_ACTION="skip"
+else
+  choose_global_action
+  if [[ "$INSTALL_SCOPE" == "all" ]]; then
+    choose_repo_action
+  else
+    REPO_ACTION="skip"
+  fi
+fi
+
+if [[ "$INSTALL_SCOPE" == "agents" ]]; then
+  skip_skill_actions
+else
+  choose_skill_actions
+fi
 show_summary
 
 FINAL_CHOICE="$(prompt_menu "What would you like to do next?" "3" "Apply these actions" "Go back and adjust choices" "Cancel")"
@@ -836,9 +868,23 @@ case "$FINAL_CHOICE" in
     apply_actions
     ;;
   2)
-    choose_global_action
-    choose_repo_action
-    choose_skill_actions
+    choose_install_scope
+    if [[ "$INSTALL_SCOPE" == "skills" ]]; then
+      GLOBAL_ACTION="skip"
+      REPO_ACTION="skip"
+    else
+      choose_global_action
+      if [[ "$INSTALL_SCOPE" == "all" ]]; then
+        choose_repo_action
+      else
+        REPO_ACTION="skip"
+      fi
+    fi
+    if [[ "$INSTALL_SCOPE" == "agents" ]]; then
+      skip_skill_actions
+    else
+      choose_skill_actions
+    fi
     show_summary
     FINAL_CHOICE="$(prompt_menu "What would you like to do next?" "2" "Apply these actions" "Cancel")"
     if [[ "$FINAL_CHOICE" == "1" ]]; then

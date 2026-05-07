@@ -71,6 +71,7 @@ cd codex-skills/simple-codex
 ```
 
 The wizard detects your current Codex environment, previews conflicts, stages candidates instead of overwriting by default, and asks for a final confirmation before writing anything.
+It lets you install the global `AGENTS.md` baseline, the simple-codex skills, or both.
 
 If `~/.codex/AGENTS.md` already exists, the wizard asks whether to replace it. The default is to keep your current file and save the simple-codex baseline beside it as `~/.codex/AGENTS.simple-codex.md`.
 
