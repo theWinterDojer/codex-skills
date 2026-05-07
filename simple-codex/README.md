@@ -39,13 +39,29 @@ Optional:
 
 ## Install
 
+### Option 1: Install Skills Manually
+
+From a cloned or downloaded repo, copy the bundled skill folders into your Codex skills directory:
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R skills/code-review ~/.codex/skills/
+cp -R skills/session-init ~/.codex/skills/
+cp -R skills/execution-ledger ~/.codex/skills/
+cp -R skills/agent-retrospective ~/.codex/skills/
+```
+
+### Option 2: Run The Installer URL
+
 Run the installer to download the latest bundle and launch the interactive wizard:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/theWinterDojer/codex-skills/main/install.sh | bash
 ```
 
-Or clone or download the repo and run the wizard locally from this folder:
+### Option 3: Clone And Run Locally
+
+Clone or download the repo and run the wizard locally from this folder:
 
 ```bash
 ./wizard.sh
