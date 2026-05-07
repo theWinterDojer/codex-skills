@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODEX_HOME="${HOME}/.codex"
 REPO_PATH=""
 DRY_RUN=0
+MODE="install"
 
 SKILLS=(
   code-review
@@ -233,11 +234,12 @@ show_intro() {
   echo
 
   local entry
-  entry="$(prompt_menu "Choose how to start:" "1" "Install or update" "Preview only (dry-run)" "Cancel")"
+  entry="$(prompt_menu "Choose how to start:" "1" "Install or update" "Uninstall simple-codex" "Preview install only (dry-run)" "Cancel")"
   case "$entry" in
     1) ;;
-    2) DRY_RUN=1 ;;
-    3) exit 0 ;;
+    2) MODE="uninstall" ;;
+    3) DRY_RUN=1 ;;
+    4) exit 0 ;;
   esac
 }
 
@@ -615,6 +617,126 @@ show_summary() {
   echo
 }
 
+UNINSTALL_HAS_ACTION=0
+
+show_file_uninstall_plan() {
+  local src="$1"
+  local dest="$2"
+  local label="$3"
+
+  if [[ ! -e "$dest" ]]; then
+    return
+  fi
+
+  if cmp -s "$src" "$dest"; then
+    echo "- Remove $label: $dest"
+    UNINSTALL_HAS_ACTION=1
+  else
+    echo "- Keep modified $label: $dest"
+  fi
+}
+
+show_skill_uninstall_plan() {
+  local skill="$1"
+  local src_dir="$SCRIPT_DIR/skills/$skill"
+  local dest_dir="$CODEX_HOME/skills/$skill"
+
+  if [[ ! -e "$dest_dir" ]]; then
+    return
+  fi
+
+  if dirs_match "$src_dir" "$dest_dir"; then
+    echo "- Remove skill: $skill"
+    UNINSTALL_HAS_ACTION=1
+  else
+    echo "- Keep modified skill: $skill"
+  fi
+}
+
+show_uninstall_summary() {
+  local skill
+
+  UNINSTALL_HAS_ACTION=0
+  echo "Here is what I can uninstall:"
+  show_file_uninstall_plan "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_DEST" "global AGENTS.md"
+  show_file_uninstall_plan "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_STAGED" "staged global AGENTS.md"
+
+  for skill in "${SKILLS[@]}"; do
+    show_skill_uninstall_plan "$skill"
+  done
+
+  if [[ -n "$REPO_PATH" ]]; then
+    show_file_uninstall_plan "$REPO_AGENTS_SRC" "$REPO_AGENTS_DEST" "repo AGENTS.md"
+    show_file_uninstall_plan "$REPO_AGENTS_SRC" "$REPO_AGENTS_STAGED" "staged repo AGENTS.md"
+  fi
+
+  if [[ -e "$MANIFEST_PATH" ]]; then
+    echo "- Remove manifest: $MANIFEST_PATH"
+    UNINSTALL_HAS_ACTION=1
+  fi
+
+  if [[ "$UNINSTALL_HAS_ACTION" -eq 0 ]]; then
+    echo "- No matching simple-codex files found to remove"
+  fi
+
+  echo
+  echo "Modified files are kept."
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Mode: dry-run. No files will be removed."
+  fi
+  echo
+}
+
+remove_file_if_matching() {
+  local src="$1"
+  local dest="$2"
+  local label="$3"
+
+  if [[ -e "$dest" ]] && cmp -s "$src" "$dest"; then
+    rm -f "$dest"
+    echo "removed $label: $dest"
+  fi
+}
+
+remove_skill_if_matching() {
+  local skill="$1"
+  local src_dir="$SCRIPT_DIR/skills/$skill"
+  local dest_dir="$CODEX_HOME/skills/$skill"
+
+  if [[ -e "$dest_dir" ]] && dirs_match "$src_dir" "$dest_dir"; then
+    rm -rf "$dest_dir"
+    echo "removed skill: $skill"
+  fi
+}
+
+apply_uninstall() {
+  local skill
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Dry-run only. No files were removed."
+    return
+  fi
+
+  remove_file_if_matching "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_DEST" "global AGENTS.md"
+  remove_file_if_matching "$GLOBAL_AGENTS_SRC" "$GLOBAL_AGENTS_STAGED" "staged global AGENTS.md"
+
+  for skill in "${SKILLS[@]}"; do
+    remove_skill_if_matching "$skill"
+  done
+
+  if [[ -n "$REPO_PATH" ]]; then
+    remove_file_if_matching "$REPO_AGENTS_SRC" "$REPO_AGENTS_DEST" "repo AGENTS.md"
+    remove_file_if_matching "$REPO_AGENTS_SRC" "$REPO_AGENTS_STAGED" "staged repo AGENTS.md"
+  fi
+
+  if [[ -e "$MANIFEST_PATH" ]]; then
+    rm -f "$MANIFEST_PATH"
+    echo "removed manifest: $MANIFEST_PATH"
+  fi
+
+  echo "simple-codex uninstall complete"
+}
+
 apply_global_action() {
   case "$GLOBAL_ACTION" in
     install|replace)
@@ -690,6 +812,17 @@ apply_actions() {
 }
 
 show_intro
+if [[ "$MODE" == "uninstall" ]]; then
+  show_uninstall_summary
+  FINAL_CHOICE="$(prompt_menu "What would you like to do next?" "2" "Apply uninstall" "Cancel")"
+  if [[ "$FINAL_CHOICE" == "1" ]]; then
+    apply_uninstall
+  else
+    echo "Cancelled."
+  fi
+  exit 0
+fi
+
 show_detection_summary
 choose_global_action
 choose_repo_action

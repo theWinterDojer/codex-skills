@@ -72,7 +72,11 @@ cd codex-skills/simple-codex
 
 The wizard detects your current Codex environment, previews conflicts, stages candidates instead of overwriting by default, and asks for a final confirmation before writing anything.
 
+If `~/.codex/AGENTS.md` already exists, the wizard asks whether to replace it. The default is to keep your current file and save the simple-codex baseline beside it as `~/.codex/AGENTS.simple-codex.md`.
+
 When bundled skills already exist, the wizard defaults to keeping the installed versions and lets you replace them in one batch or review them one by one.
+
+To uninstall, run the wizard and choose `Uninstall simple-codex`. It removes simple-codex assets only when they still match this bundle. Modified skills or `AGENTS.md` files are kept.
 
 If you are editing this repo and want to refresh the bundle from the root source files:
 
